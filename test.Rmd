@@ -1,0 +1,75 @@
+---
+title: "The Project"
+author: "Victor"
+date: "December 17, 2014"
+output: html_document
+---
+
+First, download the data and load it to R
+```{r}
+train_raw_data <- read.csv("pml-training.csv")
+test_raw_data <- read.csv("pml-testing.csv")
+names(train_raw_data)
+names(test_raw_data)
+```
+
+I find that many columns has NA, so we eliminate the columns that contain any NAs in test_data, and apply it to train_data
+
+```{r}
+test_data<-test_raw_data[,-which(apply(test_raw_data,2,function(x)any(is.na(x))))]
+train_data<-train_raw_data[,-which(apply(test_raw_data,2,function(x)any(is.na(x))))]
+names(train_data)
+names(test_data)
+names(train_data)==names(test_data)
+```
+
+So I get the training and testing data,finally I get train_data and test_data.
+
+```{r}
+train_data <- train_data[,8:60]
+test_data <- test_data[,8:59]
+```
+
+
+
+ok, now load the caret and set the seed. In order to analysis my model, i use 20% of data to be training sets and rest of them to be testing sets 
+
+```{r}
+library(caret)
+set.seed(32323)
+inTrain <- createDataPartition(y=train_data$classe,p=0.2,list=FALSE)
+
+train_data_2 <- train_data[inTrain,]
+test_data_2 <- train_data[-inTrain,]
+```
+
+First, i decided to use `rpart` as the algorithm to devide them apart.
+```{r}
+modFit <- train(classe ~ .,method = "rpart" ,data= train_data_2)
+print(modFit$finalModel)
+prediction <- predict(modFit,newdata=test_data_2)
+missClass = function(values,prediction){sum(prediction != values)/length(values)}
+missClass(test_data_2$classe,prediction)
+```
+
+But the miss class rate is high, i expect that the error should be within 5%.
+So i use random forest instead.(note: The random forest is relatively slow)
+
+```{r}
+modFit2 <- train(classe ~ .,method = "rf" ,data= train_data_2,prox=TRUE)
+print(modFit2)
+prediction <- predict(modFit2,newdata=test_data_2)
+missClass(test_data_2$classe,prediction)
+```
+
+As can be seen from the above,the miss class rate is only 0.02574
+
+So i apply it to the test_data of 20 entities, and output them.
+
+```{r}
+answer <- predict(modFit2,newdata=test_data)
+print(answer)
+```
+
+I upload all the answer to the judge, fortunately, it is all right.
+
